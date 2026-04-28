@@ -13,9 +13,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
     <script>
-        // ==========================================
-        // ⚠️ สำคัญ: ต้องวาง Config ที่ถูกต้องจาก Firebase Console
-        // ==========================================
+      
        const firebaseConfig = {
   apiKey: "AIzaSyDK1cRmWEGYuZwoH0gOwyBYnGiYIILiEgs",
   authDomain: "attendancesystem-d9614.firebaseapp.com",
@@ -30,7 +28,7 @@
         let db = null;
 
         try {
-            // ตรวจสอบก่อนว่า Config เป็นค่าจริงหรือยัง (ป้องกันหน้าเว็บพัง)
+           
             if (firebaseConfig.apiKey === "AIzaSy..." || firebaseConfig.databaseURL.includes("your-project")) {
                 console.warn("Firebase Config is still default. Running in UI-Only Mode.");
                 showToast("⚠️ ระบบ: ยังไม่ได้ต่อ Firebase (ใส่ Config ในโค้ด)", "error");
