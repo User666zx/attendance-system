@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Attendance Portal (Fixed)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+    <script>
+        // ==========================================
+        // ⚠️ สำคัญ: ต้องวาง Config ที่ถูกต้องจาก Firebase Console
+        // ==========================================
+       const firebaseConfig = {
+  apiKey: "AIzaSyDK1cRmWEGYuZwoH0gOwyBYnGiYIILiEgs",
+  authDomain: "attendancesystem-d9614.firebaseapp.com",
+  databaseURL: "https://attendancesystem-d9614-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "attendancesystem-d9614",
+  storageBucket: "attendancesystem-d9614.firebasestorage.app",
+  messagingSenderId: "161518479194",
+  appId: "1:161518479194:web:faca5ee9121a3d8b31f563",
+  measurementId: "G-WK4N5X6GCY"
+};
+
+        let db = null;
+
+        try {
+            // ตรวจสอบก่อนว่า Config เป็นค่าจริงหรือยัง (ป้องกันหน้าเว็บพัง)
+            if (firebaseConfig.apiKey === "AIzaSy..." || firebaseConfig.databaseURL.includes("your-project")) {
+                console.warn("Firebase Config is still default. Running in UI-Only Mode.");
+                showToast("⚠️ ระบบ: ยังไม่ได้ต่อ Firebase (ใส่ Config ในโค้ด)", "error");
+            } else {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.database();
+                console.log("Firebase Connected");
+            }
+        } catch (error) {
+            console.error("Firebase Error:", error);
+            showToast("เชื่อมต่อฐานข้อมูลไม่ได้: " + error.message, "error");
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Noto Sans Thai', sans-serif; }
+        .discord-embed {
+            border-left: 4px solid #5865f2;
+            background-color: #2b2d31;
+            border-radius: 4px;
+            padding: 12px 16px;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .log-entry { animation: fadeIn 0.3s ease-out; }
+        
+        /* Scrollbar */
+        .custom-scroll::-webkit-scrollbar { width: 8px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #1e1f22; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #383a40; border-radius: 4px; }
+
+        /* Toast Notification Styles */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .toast {
+            min-width: 250px;
+            padding: 12px 16px;
+            border-radius: 6px;
+            background: white;
+            color: #333;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease-out forwards;
+            font-size: 14px;
+        }
+        .toast.success { background: #2b2d31; border-left: 4px solid #57f287; color: white; }
+        .toast.error { background: #2b2d31; border-left: 4px solid #ed4245; color: white; }
+        .toast.info { background: #2b2d31; border-left: 4px solid #5865f2; color: white; }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(100%); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateX(0); }
+            to { opacity: 0; transform: translateX(100%); }
+        }
+    </style>
+</head>
+<body class="bg-[#313338] text-gray-200 h-screen flex overflow-hidden">
+
+    <!-- Container สำหรับแจ้งเตือน -->
+    <div id="toast-container"></div>
+
+    <!-- ========================================== -->
+    <!-- ส่วนที่ 1: แถบด้านซ้าย (ส่วนสำหรับกรอกข้อมูล) -->
+    <!-- ========================================== -->
+    <div class="w-96 bg-[#2b2d31] flex flex-col border-r border-gray-700 shrink-0">
+        
+        <!-- Header -->
+        <div class="p-5 border-b border-gray-700">
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                <i class="fas fa-fingerprint text-[#5865f2]"></i> ระบบบันทึกเวลา
+            </h2>
+            <div id="connection-status" class="text-xs text-yellow-500 mt-1 hidden">
+                <i class="fas fa-exclamation-triangle"></i> ยังไม่ได้ต่อ Firebase
+            </div>
+        </div>
+
+        <!-- ช่องกรอกชื่อ+ตำแหน่ง -->
+        <div class="p-5 space-y-4">
+            <div>
+                <label class="text-sm text-gray-400 block mb-2">ชื่อทีมงาน + ตำแหน่ง <span class="text-red-400">*</span></label>
+                <input type="text" id="user-info" class="w-full bg-[#1e1f22] text-white px-4 py-3 rounded-lg outline-none text-base border border-transparent focus:border-[#5865f2] transition" placeholder="เรย์ด้า CL">
+                <div class="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                    <i class="fas fa-info-circle"></i> 
+                    ใส่ตำแหน่งท้ายชื่อ: <b>AM, CL</b> หรือ <b>EN</b> เท่านั้น
+                </div>
+            </div>
+        </div>
+
+        <!-- ปุ่มกด -->
+        <div class="px-5 space-y-3">
+            <button onclick="submitLog('checkin')" id="btn-checkin" class="w-full bg-[#57f287] hover:bg-[#3ba55c] text-black font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 text-base">
+                <i class="fas fa-right-to-bracket"></i> เข้างาน
+            </button>
+            <button onclick="submitLog('checkout')" id="btn-checkout" class="w-full bg-[#ed4245] hover:bg-[#c03538] text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 text-base">
+                <i class="fas fa-right-from-bracket"></i> ออกงาน
+            </button>
+            <button onclick="toggleProofForm()" id="btn-proof-toggle" class="w-full bg-[#5865f2] hover:bg-[#4752c4] text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 text-base">
+                <i class="fas fa-camera"></i> ส่งหลักฐานการทำงาน
+            </button>
+        </div>
+
+        <!-- ฟอร์มส่งหลักฐาน -->
+        <div id="proof-form" class="hidden px-5 pt-4">
+            <div class="bg-[#1e1f22] p-4 rounded-lg border border-gray-700 space-y-3">
+                <div>
+                    <label class="text-xs text-gray-400 block mb-1">รายละเอียดงาน</label>
+                    <textarea id="proof-detail" rows="2" class="w-full bg-[#383a40] text-white px-3 py-2 rounded outline-none text-sm resize-none" placeholder="ทำอะไรมาบ้าง..."></textarea>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 block mb-1">แปะลิงก์รูป (จาก Discord)</label>
+                    <input type="text" id="proof-img" class="w-full bg-[#383a40] text-white px-3 py-2 rounded outline-none text-sm" placeholder="https://cdn.discordapp.com/...">
+                </div>
+                <button onclick="submitLog('proof')" class="w-full bg-[#5865f2] hover:bg-[#4752c4] text-white text-sm font-semibold py-2 rounded-md transition">
+                    <i class="fas fa-paper-plane mr-1"></i> ยืนยันส่ง
+                </button>
+            </div>
+        </div>
+
+        <div class="flex-1"></div>
+        
+        <!-- Status Footer -->
+        <div class="p-5 border-t border-gray-700">
+            <div class="text-xs text-gray-500 flex items-center gap-2">
+                <i class="fas fa-circle text-[#57f287] text-[8px]"></i> พร้อมใช้งาน
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- ส่วนที่ 2: แถบด้านขวา (ข้อมูลที่ทีมงานแจ้งเข้ามา) -->
+    <!-- ========================================== -->
+    <div class="flex-1 flex flex-col bg-[#313338]">
+        
+        <!-- Header -->
+        <div class="h-16 bg-[#2b2d31] border-b border-gray-700 flex items-center px-6 shrink-0">
+            <i class="fas fa-stream text-gray-400 mr-3"></i>
+            <span class="font-semibold text-white text-lg">ข้อมูลที่ทีมงานแจ้งเข้ามา</span>
+        </div>
+
+        <!-- Live Feed Container -->
+        <div class="flex-1 overflow-y-auto p-6 space-y-4 custom-scroll" id="live-feed">
+            
+            <!-- ข้อความเริ่มต้น -->
+            <div id="empty-state" class="flex flex-col items-center justify-center h-full text-gray-500">
+                <i class="fas fa-inbox text-5xl mb-4"></i>
+                <p class="text-lg">ยังไม่มีข้อมูลการเข้างาน</p>
+                <p class="text-sm mt-1">รอให้ทีมงานกดบันทึกข้อมูลจากด้านซ้าย...</p>
+            </div>
+
+        </div>
+    </div>
+
+
+    <script>
+        const liveFeed = document.getElementById('live-feed');
+        const emptyState = document.getElementById('empty-state');
+
+        // ฟังก์ชันแสดง Toast Notification (แทน Alert)
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            let icon = 'info-circle';
+            if (type === 'success') icon = 'check-circle';
+            if (type === 'error') icon = 'exclamation-circle';
+
+            toast.innerHTML = `<i class="fas fa-${icon}"></i> <span>${message}</span>`;
+            
+            container.appendChild(toast);
+
+            // ลบ Toast อัตโนมัติเมื่อเวลาผ่านไป 3 วินาที
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s ease-out forwards';
+                toast.addEventListener('animationend', () => {
+                    toast.remove();
+                });
+            }, 3000);
+        }
+
+        function toggleProofForm() {
+            const form = document.getElementById('proof-form');
+            form.classList.toggle('hidden');
+        }
+
+        // ฟังก์ชันตัดคำ ชื่อ และ ตำแหน่ง
+        function parseUserInfo(input) {
+            const parts = input.trim().split(/\s+/); // แบ่งคำด้วยช่องว่าง (จัดการช่องว่างหลายตัวได้)
+            if (parts.length < 2) return null;
+            
+            const role = parts[parts.length - 1].toUpperCase(); // ดึงคำสุดท้ายมาเป็น Role
+            const validRoles = ['AM', 'CL', 'EN'];
+            
+            if (!validRoles.includes(role)) return null; // ถ้าไม่ใช่ AM, CL, EN ถือว่าผิดพลาด
+            
+            const name = parts.slice(0, -1).join(' '); // ตัดคำอื่นๆ ที่เหลือมาเป็นชื่อ
+            return { name: name, role: role };
+        }
+
+        function setLoading(isLoading, btnId) {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+            if (isLoading) {
+                const originalText = btn.innerHTML;
+                btn.dataset.original = originalText;
+                btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...`;
+                btn.disabled = true;
+                btn.classList.add('opacity-75', 'cursor-not-allowed');
+            } else {
+                btn.innerHTML = btn.dataset.original;
+                btn.disabled = false;
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+            }
+        }
+
+        function submitLog(actionType) {
+            // 1. ตรวจสอบว่า Firebase พร้อมหรือไม่
+            if (!db) {
+                showToast("❌ ระบบยังไม่เชื่อมต่อฐานข้อมูล (ตรวจสอบ Config)", "error");
+                return;
+            }
+
+            // 2. ตรวจสอบชื่อ
+            const inputRaw = document.getElementById('user-info').value.trim();
+            const parsed = parseUserInfo(inputRaw);
+
+            if (!parsed) {
+                showToast('⚠️ กรุณากรอกข้อมูลให้ถูกต้อง\nเช่น: เรย์ด้า CL (ต้องมี AM, CL, หรือ EN ท้ายชื่อ)', "error");
+                // สั่นกล่องข้อความเล็กน้อยเพื่อเตือน
+                document.getElementById('user-info').classList.add('border-red-500');
+                setTimeout(() => document.getElementById('user-info').classList.remove('border-red-500'), 2000);
+                return;
+            }
+
+            let detail = "";
+            let imgUrl = "";
+            let btnId = "";
+
+            // 3. เตรียมข้อมูลตามประเภท
+            if (actionType === 'checkin') btnId = "btn-checkin";
+            else if (actionType === 'checkout') btnId = "btn-checkout";
+            else if (actionType === 'proof') {
+                btnId = "btn-proof-toggle"; // ใช้ ID ของปุ่มที่เปิดฟอร์มไว้สำหรับหาปุ่มหลัก หรือไม่ก็ได้
+                detail = document.getElementById('proof-detail').value.trim();
+                imgUrl = document.getElementById('proof-img').value.trim();
+                
+                if (!detail || !imgUrl) {
+                    showToast("⚠️ กรุณากรอกรายละเอียดและลิงก์รูปภาพด้วย", "error");
+                    return;
+                }
+                // เช็คลิงก์ Discord (เพิ่มความยืดหยุ่นเล็กน้อย)
+                if (!imgUrl.startsWith("http")) {
+                    showToast("⚠️ ลิงก์รูปภาพไม่ถูกต้อง", "error");
+                    return;
+                }
+            }
+
+            // 4. เริ่มส่งข้อมูล
+            setLoading(true, btnId);
+
+            const logsRef = db.ref('logs');
+            
+            // ใช้ try-catch ครอบการทำงาน async
+            try {
+                logsRef.push({
+                    user: parsed.name,
+                    role: parsed.role,
+                    action: actionType,
+                    detail: detail,
+                    imageUrl: imgUrl,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP 
+                }, (error) => {
+                    // Callback เมื่อ push เสร็จสิ้น
+                    setLoading(false, btnId);
+
+                    if (error) {
+                        showToast("❌ บันทึกข้อมูลไม่สำเร็จ: " + error.message, "error");
+                    } else {
+                        // Success
+                        let msg = "";
+                        if(actionType === 'checkin') msg = "✅ บันทึกเข้างานเรียบร้อย";
+                        if(actionType === 'checkout') msg = "👋 บันทึกออกงานเรียบร้อย";
+                        if(actionType === 'proof') msg = "📸 ส่งหลักฐานเรียบร้อย";
+                        
+                        showToast(msg, "success");
+
+                        // ล้างค่าถ้าเป็นการส่งหลักฐาน
+                        if (actionType === 'proof') {
+                            document.getElementById('proof-detail').value = '';
+                            document.getElementById('proof-img').value = '';
+                            toggleProofForm();
+                        }
+                    }
+                });
+            } catch (e) {
+                setLoading(false, btnId);
+                showToast("❌ เกิดข้อผิดพลาด: " + e.message, "error");
+                console.error(e);
+            }
+        }
+
+        // ==========================================
+        // 🌟 ระบบรับข้อมูล Real-time จาก Firebase
+        // ==========================================
+        if (db) {
+            const logsRef = db.ref('logs').orderByChild('timestamp').limitToLast(100);
+            
+            logsRef.on('child_added', (snapshot) => {
+                const data = snapshot.val();
+                if (emptyState) {
+                    emptyState.style.display = 'none';
+                }
+                addLogToUI(data);
+            });
+        }
+
+        function addLogToUI(data) {
+            const time = new Date(data.timestamp);
+            const timeStr = time.toLocaleString('th-TH', {
+                hour: '2-digit', minute:'2-digit', 
+                day:'2-digit', month:'short', year:'numeric'
+            });
+            
+            // กำหนดสีตาม Role
+            let roleColor = 'bg-gray-500';
+            if(data.role === 'AM') roleColor = 'bg-red-500';
+            if(data.role === 'CL') roleColor = 'bg-blue-500';
+            if(data.role === 'EN') roleColor = 'bg-green-500';
+
+            let html = `
+                <div class="flex gap-3 log-entry">
+                    <div class="w-10 h-10 bg-indigo-700 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white">
+                        ${data.user.substring(0,2)}
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-sm font-semibold text-white">${data.user}</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded ${roleColor} text-white font-bold">${data.role}</span>
+                            <span class="text-xs text-gray-500">${timeStr}</span>
+                        </div>
+            `;
+
+            // แสดงผลตามประเภทที่กด
+            if (data.action === 'checkin') {
+                html += `<div class="discord-embed border-[#57f287]"><span class="text-sm text-[#57f287] font-semibold"><i class="fas fa-check-circle mr-1"></i> บันทึกเข้างานสำเร็จ</span></div>`;
+            } 
+            else if (data.action === 'checkout') {
+                html += `<div class="discord-embed border-[#ed4245]"><span class="text-sm text-[#ed4245] font-semibold"><i class="fas fa-sign-out-alt mr-1"></i> บันทึกออกงานสำเร็จ</span></div>`;
+            } 
+            else if (data.action === 'proof') {
+                html += `
+                    <div class="discord-embed border-[#5865f2]">
+                        <div class="text-sm text-[#5865f2] font-semibold mb-1"><i class="fas fa-image mr-1"></i> ส่งหลักฐานการทำงาน</div>
+                        <div class="text-sm text-gray-300">${data.detail}</div>
+                        ${data.imageUrl ? `<img src="${data.imageUrl}" class="mt-3 rounded-md max-h-48 object-cover cursor-pointer hover:opacity-80 transition" onclick="window.open('${data.imageUrl}', '_blank')">` : ''}
+                    </div>
+                `;
+            }
+
+            html += `</div></div>`;
+            
+            liveFeed.insertAdjacentHTML('beforeend', html);
+            liveFeed.scrollTop = liveFeed.scrollHeight;
+        }
+    </script>
+</body>
+</html>
