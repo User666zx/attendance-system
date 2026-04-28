@@ -177,12 +177,12 @@
                     </div>
                 </div>
 
-                <!-- ปุ่มลางาน (ใหม่) -->
+                <!-- ปุ่มลางาน -->
                 <button onclick="toggleLeaveForm()" id="btn-leave-toggle" class="w-full bg-[#f97316] hover:bg-[#ea580c] text-black font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 text-base">
                     <i class="fas fa-plane-departure"></i> ลางาน (พร้อมเหตุผล)
                 </button>
 
-                <!-- ฟอร์มลางาน (ใหม่) -->
+                <!-- ฟอร์มลางาน -->
                 <div id="leave-form" class="hidden">
                     <div class="bg-[#1e1f22] p-4 rounded-lg border border-gray-700 space-y-3">
                         <div>
@@ -241,10 +241,10 @@
 
         </div>
         
-        <!-- Status Footer -->
+        <!-- Status Footer (อัปเดตเป็น กำลังปรับปรุง สีเหลือง) -->
         <div class="p-5 border-t border-gray-700 shrink-0 bg-[#2b2d31] z-10">
             <div class="text-xs text-gray-500 flex items-center gap-2">
-                <i class="fas fa-circle text-[#57f287] text-[8px]"></i> พร้อมใช้งาน
+                <i class="fas fa-circle text-yellow-400 text-[8px]"></i> กำลังปรับปรุง
             </div>
         </div>
     </div>
@@ -512,7 +512,7 @@
                 }
 
                 const checkInTime = latestEntry.timestamp;
-                const targetTime = checkInTime + (3 * 60 * 60 * 1000); // 3 hours in ms
+                const targetTime = checkInTime + (3 * 60 * 60 * 1000); //3 hours in ms
                 
                 function updateTimer() {
                     const now = Date.now();
