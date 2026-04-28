@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Staff Attendance Portal (Update Roles)</title>
+    <title>Staff Attendance Portal (V2)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -43,7 +43,7 @@
     </script>
 
     <style>
-        body { font-family: 'Noto Sans Thai', sans-serif; }
+        body { font-family: 'Noto Sans Thai', sans-serif; user-select: none; /* ป้องกันการเลือกข้อความเวลากดค้างบนมือถือ */ }
         .discord-embed {
             border-left: 4px solid #5865f2;
             background-color: #2b2d31;
@@ -54,7 +54,7 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .log-entry { animation: fadeIn 0.3s ease-out; }
+        .log-entry { animation: fadeIn 0.3s ease-out; position: relative; }
         
         /* Scrollbar */
         .custom-scroll::-webkit-scrollbar { width: 8px; }
@@ -125,8 +125,7 @@
                 <input type="text" id="user-info" class="w-full bg-[#1e1f22] text-white px-4 py-3 rounded-lg outline-none text-base border border-transparent focus:border-[#5865f2] transition" placeholder="เรย์ด้า CL">
                 <div class="text-xs text-gray-500 mt-2 flex items-center gap-1">
                     <i class="fas fa-info-circle"></i> 
-                    <!-- อัปเดตข้อความเตือนรวมทุกตำแหน่ง -->
-                    ใส่ตำแหน่งท้ายชื่อ: <b>AM, CL, EN, PR, HCL, PL, HAM</b> เท่านั้น
+                    ใส่ตำแหน่งท้ายชื่อ: <b>AM, CL, EN, PR, HCL, PL, HAM</b>
                 </div>
             </div>
         </div>
@@ -144,17 +143,28 @@
             </button>
         </div>
 
-        <!-- ฟอร์มส่งหลักฐาน -->
+        <!-- ฟอร์มส่งหลักฐาน (ปรับปรุง) -->
         <div id="proof-form" class="hidden px-5 pt-4">
             <div class="bg-[#1e1f22] p-4 rounded-lg border border-gray-700 space-y-3">
                 <div>
                     <label class="text-xs text-gray-400 block mb-1">รายละเอียดงาน</label>
                     <textarea id="proof-detail" rows="2" class="w-full bg-[#383a40] text-white px-3 py-2 rounded outline-none text-sm resize-none" placeholder="ทำอะไรมาบ้าง..."></textarea>
                 </div>
+                
+                <!-- Input แนบรูป (ซ่อนไว้) -->
+                <input type="file" id="proof-file-input" accept="image/*" class="hidden">
+
+                <!-- ปุ่มกดเลือกรูปแทนการวางลิงก์ -->
                 <div>
-                    <label class="text-xs text-gray-400 block mb-1">แปะลิงก์รูป (จาก Discord)</label>
-                    <input type="text" id="proof-img" class="w-full bg-[#383a40] text-white px-3 py-2 rounded outline-none text-sm" placeholder="https://cdn.discordapp.com/...">
+                    <label class="text-xs text-gray-400 block mb-1">แนบรูปภาพ (ขนาดต้องไม่เกิน 500KB)</label>
+                    <button type="button" onclick="document.getElementById('proof-file-input').click()" class="w-full bg-[#383a40] hover:bg-[#4a4d55] text-white px-3 py-2 rounded outline-none text-sm flex items-center justify-center gap-2 border border-dashed border-gray-600 transition">
+                        <i class="fas fa-image"></i> เลือกรูปภาพจากเครื่อง
+                    </button>
+                    <div id="file-name-display" class="text-[10px] text-green-400 mt-1 hidden">
+                        <i class="fas fa-check"></i> เลือกรูปเรียบร้อย
+                    </div>
                 </div>
+
                 <button onclick="submitLog('proof')" class="w-full bg-[#5865f2] hover:bg-[#4752c4] text-white text-sm font-semibold py-2 rounded-md transition">
                     <i class="fas fa-paper-plane mr-1"></i> ยืนยันส่ง
                 </button>
@@ -190,7 +200,7 @@
             <div id="empty-state" class="flex flex-col items-center justify-center h-full text-gray-500">
                 <i class="fas fa-inbox text-5xl mb-4"></i>
                 <p class="text-lg">ยังไม่มีข้อมูลการเข้างาน</p>
-                <p class="text-sm mt-1">รอให้ทีมงานกดบันทึกข้อมูลจากด้านซ้าย...</p>
+                <p class="text-sm mt-1">*เพื่อลบบันทึก ให้กดค้าง (มือถือ) หรือคลิกขวา (คอมพิวเตอร์)*</p>
             </div>
 
         </div>
@@ -200,8 +210,9 @@
     <script>
         const liveFeed = document.getElementById('live-feed');
         const emptyState = document.getElementById('empty-state');
+        let selectedImageBase64 = null;
 
-        // ฟังก์ชันแสดง Toast Notification (แทน Alert)
+        // ฟังก์ชันแสดง Toast Notification
         function showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -215,7 +226,6 @@
             
             container.appendChild(toast);
 
-            // ลบ Toast อัตโนมัติเมื่อเวลาผ่านไป 3 วินาที
             setTimeout(() => {
                 toast.style.animation = 'fadeOut 0.3s ease-out forwards';
                 toast.addEventListener('animationend', () => {
@@ -230,14 +240,37 @@
         }
 
         // ==========================================
-        // 📝 Logic: เพิ่ม HCL, PL, HAM ในระบบตรวจสอบ
+        // 🖼️ จัดการไฟล์รูปภาพ (File Handling)
         // ==========================================
+        const fileInput = document.getElementById('proof-file-input');
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // เช็คขนาดไฟล์ (ต้องไม่เกิน 500KB เพื่อป้องกันฐานข้อมูลเต็ม)
+            if (file.size > 500 * 1024) { 
+                showToast("❌ รูปมีขนาดใหญ่เกินไป (ต้องน้อยกว่า 500KB)", "error");
+                fileInput.value = ""; // ล้างค่า
+                selectedImageBase64 = null;
+                document.getElementById('file-name-display').classList.add('hidden');
+                return;
+            }
+
+            // แปลงไฟล์เป็น Base64
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                selectedImageBase64 = evt.target.result; // เก็บค่ารูปแบบ Base64
+                document.getElementById('file-name-display').classList.remove('hidden');
+                showToast("✅ เลือกรูปภาพเรียบร้อย", "success");
+            };
+            reader.readAsDataURL(file);
+        });
+
         function parseUserInfo(input) {
             const parts = input.trim().split(/\s+/); 
             if (parts.length < 2) return null;
             
             const role = parts[parts.length - 1].toUpperCase(); 
-            // เพิ่ม 3 ตำแหน่งใหม่เข้าไป
             const validRoles = ['AM', 'CL', 'EN', 'PR', 'HCL', 'PL', 'HAM']; 
             
             if (!validRoles.includes(role)) return null; 
@@ -264,7 +297,7 @@
 
         function submitLog(actionType) {
             if (!db) {
-                showToast("❌ ระบบยังไม่เชื่อมต่อฐานข้อมูล (ตรวจสอบ Config)", "error");
+                showToast("❌ ระบบยังไม่เชื่อมต่อฐานข้อมูล", "error");
                 return;
             }
 
@@ -272,8 +305,7 @@
             const parsed = parseUserInfo(inputRaw);
 
             if (!parsed) {
-                // อัปเดตข้อความเตือนให้ครบถ้วน
-                showToast('⚠️ กรุณากรอกข้อมูลให้ถูกต้อง\nเช่น: สมชาย CL (ต้องมี AM, CL, EN, PR, HCL, PL หรือ HAM ท้ายชื่อ)', "error");
+                showToast('⚠️ กรุณากรอกชื่อ+ตำแหน่งให้ถูกต้อง', "error");
                 document.getElementById('user-info').classList.add('border-red-500');
                 setTimeout(() => document.getElementById('user-info').classList.remove('border-red-500'), 2000);
                 return;
@@ -288,14 +320,12 @@
             else if (actionType === 'proof') {
                 btnId = "btn-proof-toggle";
                 detail = document.getElementById('proof-detail').value.trim();
-                imgUrl = document.getElementById('proof-img').value.trim();
+                
+                // ใช้ค่ารูปจากตัวแปร selectedImageBase64
+                imgUrl = selectedImageBase64; 
                 
                 if (!detail || !imgUrl) {
-                    showToast("⚠️ กรุณากรอกรายละเอียดและลิงก์รูปภาพด้วย", "error");
-                    return;
-                }
-                if (!imgUrl.startsWith("http")) {
-                    showToast("⚠️ ลิงก์รูปภาพไม่ถูกต้อง", "error");
+                    showToast("⚠️ กรุณากรอกรายละเอียดและแนบรูปภาพ", "error");
                     return;
                 }
             }
@@ -327,7 +357,9 @@
 
                         if (actionType === 'proof') {
                             document.getElementById('proof-detail').value = '';
-                            document.getElementById('proof-img').value = '';
+                            fileInput.value = '';
+                            selectedImageBase64 = null;
+                            document.getElementById('file-name-display').classList.add('hidden');
                             toggleProofForm();
                         }
                     }
@@ -339,22 +371,40 @@
             }
         }
 
+        // ==========================================
+        // ❌ ฟังก์ชันลบบันทึก (Delete Logic)
+        // ==========================================
+        function deleteLog(key) {
+            if(!db) return;
+            if(confirm('ยืนยันลบบันทึกนี้?')) {
+                db.ref('logs/' + key).remove()
+                .then(() => showToast("🗑️ ลบบันทึกเรียบร้อย", "success"))
+                .catch(err => showToast("❌ ลบไม่สำเร็จ", "error"));
+            }
+        }
+
         if (db) {
             const logsRef = db.ref('logs').orderByChild('timestamp').limitToLast(100);
             
             logsRef.on('child_added', (snapshot) => {
-                const data = snapshot.val();
-                if (emptyState) {
-                    emptyState.style.display = 'none';
-                }
-                addLogToUI(data);
+                if (emptyState) emptyState.style.display = 'none';
+                addLogToUI(snapshot);
+            });
+
+            // รองรับการลบ Realtime (ถ้าใครลบ หน้าจอเราก็หายไป)
+            logsRef.on('child_removed', (snapshot) => {
+                const el = document.getElementById('log-' + snapshot.key);
+                if(el) el.remove();
             });
         }
 
         // ==========================================
-        // 🎨 UI: กำหนดสีให้ตำแหน่งใหม่
+        // 🖱️ จัดการ Long Press / Right Click เพื่อลบ
         // ==========================================
-        function addLogToUI(data) {
+        function addLogToUI(snapshot) {
+            const data = snapshot.val();
+            const key = snapshot.key; // เก็บ key เอาไว้สำหรับลบ
+
             const time = new Date(data.timestamp);
             const timeStr = time.toLocaleString('th-TH', {
                 hour: '2-digit', minute:'2-digit', 
@@ -366,22 +416,22 @@
             if(data.role === 'CL') roleColor = 'bg-blue-500';
             if(data.role === 'EN') roleColor = 'bg-green-500';
             if(data.role === 'PR') roleColor = 'bg-purple-500';
-            // เพิ่ม 3 ตำแหน่งใหม่พร้อมสี
             if(data.role === 'HCL') roleColor = 'bg-orange-500';
             if(data.role === 'PL') roleColor = 'bg-teal-500';
             if(data.role === 'HAM') roleColor = 'bg-pink-500';
 
             let html = `
-                <div class="flex gap-3 log-entry">
-                    <div class="w-10 h-10 bg-indigo-700 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white">
-                        ${data.user.substring(0,2)}
-                    </div>
-                    <div class="flex-1">
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="text-sm font-semibold text-white">${data.user}</span>
-                            <span class="text-[10px] px-1.5 py-0.5 rounded ${roleColor} text-white font-bold">${data.role}</span>
-                            <span class="text-xs text-gray-500">${timeStr}</span>
+                <div id="log-${key}" class="log-entry group" oncontextmenu="deleteLog('${key}'); return false;">
+                    <div class="flex gap-3">
+                        <div class="w-10 h-10 bg-indigo-700 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white">
+                            ${data.user.substring(0,2)}
                         </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-sm font-semibold text-white">${data.user}</span>
+                                <span class="text-[10px] px-1.5 py-0.5 rounded ${roleColor} text-white font-bold">${data.role}</span>
+                                <span class="text-xs text-gray-500">${timeStr}</span>
+                            </div>
             `;
 
             if (data.action === 'checkin') {
@@ -400,9 +450,25 @@
                 `;
             }
 
-            html += `</div></div>`;
+            html += `</div></div></div>`;
             
             liveFeed.insertAdjacentHTML('beforeend', html);
+            
+            // เพิ่ม Logic Long Press สำหรับมือถือ
+            const logEl = document.getElementById(`log-${key}`);
+            let pressTimer;
+            
+            // Touch Start (เริ่มกด)
+            logEl.addEventListener('touchstart', (e) => {
+                pressTimer = setTimeout(() => {
+                    deleteLog(key); // ทำงานเมื่อกดค้าง
+                }, 800); // กดค้าง 800ms
+            });
+            
+            // Touch End (ปล่อยกด) หรือย้ายนิ้ว ให้ยกเลิก
+            logEl.addEventListener('touchend', () => clearTimeout(pressTimer));
+            logEl.addEventListener('touchmove', () => clearTimeout(pressTimer));
+
             liveFeed.scrollTop = liveFeed.scrollHeight;
         }
     </script>
