@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Staff Attendance Portal (Fixed)</title>
+    <title>Staff Attendance Portal (Update Roles)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -13,22 +13,21 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
     <script>
-      
+       // === Config ของคุณ ===
        const firebaseConfig = {
-  apiKey: "AIzaSyDK1cRmWEGYuZwoH0gOwyBYnGiYIILiEgs",
-  authDomain: "attendancesystem-d9614.firebaseapp.com",
-  databaseURL: "https://attendancesystem-d9614-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "attendancesystem-d9614",
-  storageBucket: "attendancesystem-d9614.firebasestorage.app",
-  messagingSenderId: "161518479194",
-  appId: "1:161518479194:web:faca5ee9121a3d8b31f563",
-  measurementId: "G-WK4N5X6GCY"
-};
+          apiKey: "AIzaSyDK1cRmWEGYuZwoH0gOwyBYnGiYIILiEgs",
+          authDomain: "attendancesystem-d9614.firebaseapp.com",
+          databaseURL: "https://attendancesystem-d9614-default-rtdb.asia-southeast1.firebasedatabase.app",
+          projectId: "attendancesystem-d9614",
+          storageBucket: "attendancesystem-d9614.firebasestorage.app",
+          messagingSenderId: "161518479194",
+          appId: "1:161518479194:web:faca5ee9121a3d8b31f563",
+          measurementId: "G-WK4N5X6GCY"
+        };
 
         let db = null;
 
         try {
-           
             if (firebaseConfig.apiKey === "AIzaSy..." || firebaseConfig.databaseURL.includes("your-project")) {
                 console.warn("Firebase Config is still default. Running in UI-Only Mode.");
                 showToast("⚠️ ระบบ: ยังไม่ได้ต่อ Firebase (ใส่ Config ในโค้ด)", "error");
@@ -126,7 +125,8 @@
                 <input type="text" id="user-info" class="w-full bg-[#1e1f22] text-white px-4 py-3 rounded-lg outline-none text-base border border-transparent focus:border-[#5865f2] transition" placeholder="เรย์ด้า CL">
                 <div class="text-xs text-gray-500 mt-2 flex items-center gap-1">
                     <i class="fas fa-info-circle"></i> 
-                    ใส่ตำแหน่งท้ายชื่อ: <b>AM, CL</b> หรือ <b>EN</b> เท่านั้น
+                    <!-- อัปเดตข้อความเตือนรวมทุกตำแหน่ง -->
+                    ใส่ตำแหน่งท้ายชื่อ: <b>AM, CL, EN, PR, HCL, PL, HAM</b> เท่านั้น
                 </div>
             </div>
         </div>
@@ -229,17 +229,20 @@
             form.classList.toggle('hidden');
         }
 
-        // ฟังก์ชันตัดคำ ชื่อ และ ตำแหน่ง
+        // ==========================================
+        // 📝 Logic: เพิ่ม HCL, PL, HAM ในระบบตรวจสอบ
+        // ==========================================
         function parseUserInfo(input) {
-            const parts = input.trim().split(/\s+/); // แบ่งคำด้วยช่องว่าง (จัดการช่องว่างหลายตัวได้)
+            const parts = input.trim().split(/\s+/); 
             if (parts.length < 2) return null;
             
-            const role = parts[parts.length - 1].toUpperCase(); // ดึงคำสุดท้ายมาเป็น Role
-            const validRoles = ['AM', 'CL', 'EN'];
+            const role = parts[parts.length - 1].toUpperCase(); 
+            // เพิ่ม 3 ตำแหน่งใหม่เข้าไป
+            const validRoles = ['AM', 'CL', 'EN', 'PR', 'HCL', 'PL', 'HAM']; 
             
-            if (!validRoles.includes(role)) return null; // ถ้าไม่ใช่ AM, CL, EN ถือว่าผิดพลาด
+            if (!validRoles.includes(role)) return null; 
             
-            const name = parts.slice(0, -1).join(' '); // ตัดคำอื่นๆ ที่เหลือมาเป็นชื่อ
+            const name = parts.slice(0, -1).join(' '); 
             return { name: name, role: role };
         }
 
@@ -260,19 +263,17 @@
         }
 
         function submitLog(actionType) {
-            // 1. ตรวจสอบว่า Firebase พร้อมหรือไม่
             if (!db) {
                 showToast("❌ ระบบยังไม่เชื่อมต่อฐานข้อมูล (ตรวจสอบ Config)", "error");
                 return;
             }
 
-            // 2. ตรวจสอบชื่อ
             const inputRaw = document.getElementById('user-info').value.trim();
             const parsed = parseUserInfo(inputRaw);
 
             if (!parsed) {
-                showToast('⚠️ กรุณากรอกข้อมูลให้ถูกต้อง\nเช่น: เรย์ด้า CL (ต้องมี AM, CL, หรือ EN ท้ายชื่อ)', "error");
-                // สั่นกล่องข้อความเล็กน้อยเพื่อเตือน
+                // อัปเดตข้อความเตือนให้ครบถ้วน
+                showToast('⚠️ กรุณากรอกข้อมูลให้ถูกต้อง\nเช่น: สมชาย CL (ต้องมี AM, CL, EN, PR, HCL, PL หรือ HAM ท้ายชื่อ)', "error");
                 document.getElementById('user-info').classList.add('border-red-500');
                 setTimeout(() => document.getElementById('user-info').classList.remove('border-red-500'), 2000);
                 return;
@@ -282,11 +283,10 @@
             let imgUrl = "";
             let btnId = "";
 
-            // 3. เตรียมข้อมูลตามประเภท
             if (actionType === 'checkin') btnId = "btn-checkin";
             else if (actionType === 'checkout') btnId = "btn-checkout";
             else if (actionType === 'proof') {
-                btnId = "btn-proof-toggle"; // ใช้ ID ของปุ่มที่เปิดฟอร์มไว้สำหรับหาปุ่มหลัก หรือไม่ก็ได้
+                btnId = "btn-proof-toggle";
                 detail = document.getElementById('proof-detail').value.trim();
                 imgUrl = document.getElementById('proof-img').value.trim();
                 
@@ -294,19 +294,16 @@
                     showToast("⚠️ กรุณากรอกรายละเอียดและลิงก์รูปภาพด้วย", "error");
                     return;
                 }
-                // เช็คลิงก์ Discord (เพิ่มความยืดหยุ่นเล็กน้อย)
                 if (!imgUrl.startsWith("http")) {
                     showToast("⚠️ ลิงก์รูปภาพไม่ถูกต้อง", "error");
                     return;
                 }
             }
 
-            // 4. เริ่มส่งข้อมูล
             setLoading(true, btnId);
 
             const logsRef = db.ref('logs');
             
-            // ใช้ try-catch ครอบการทำงาน async
             try {
                 logsRef.push({
                     user: parsed.name,
@@ -316,13 +313,11 @@
                     imageUrl: imgUrl,
                     timestamp: firebase.database.ServerValue.TIMESTAMP 
                 }, (error) => {
-                    // Callback เมื่อ push เสร็จสิ้น
                     setLoading(false, btnId);
 
                     if (error) {
                         showToast("❌ บันทึกข้อมูลไม่สำเร็จ: " + error.message, "error");
                     } else {
-                        // Success
                         let msg = "";
                         if(actionType === 'checkin') msg = "✅ บันทึกเข้างานเรียบร้อย";
                         if(actionType === 'checkout') msg = "👋 บันทึกออกงานเรียบร้อย";
@@ -330,7 +325,6 @@
                         
                         showToast(msg, "success");
 
-                        // ล้างค่าถ้าเป็นการส่งหลักฐาน
                         if (actionType === 'proof') {
                             document.getElementById('proof-detail').value = '';
                             document.getElementById('proof-img').value = '';
@@ -345,9 +339,6 @@
             }
         }
 
-        // ==========================================
-        // 🌟 ระบบรับข้อมูล Real-time จาก Firebase
-        // ==========================================
         if (db) {
             const logsRef = db.ref('logs').orderByChild('timestamp').limitToLast(100);
             
@@ -360,6 +351,9 @@
             });
         }
 
+        // ==========================================
+        // 🎨 UI: กำหนดสีให้ตำแหน่งใหม่
+        // ==========================================
         function addLogToUI(data) {
             const time = new Date(data.timestamp);
             const timeStr = time.toLocaleString('th-TH', {
@@ -367,11 +361,15 @@
                 day:'2-digit', month:'short', year:'numeric'
             });
             
-            // กำหนดสีตาม Role
             let roleColor = 'bg-gray-500';
             if(data.role === 'AM') roleColor = 'bg-red-500';
             if(data.role === 'CL') roleColor = 'bg-blue-500';
             if(data.role === 'EN') roleColor = 'bg-green-500';
+            if(data.role === 'PR') roleColor = 'bg-purple-500';
+            // เพิ่ม 3 ตำแหน่งใหม่พร้อมสี
+            if(data.role === 'HCL') roleColor = 'bg-orange-500';
+            if(data.role === 'PL') roleColor = 'bg-teal-500';
+            if(data.role === 'HAM') roleColor = 'bg-pink-500';
 
             let html = `
                 <div class="flex gap-3 log-entry">
@@ -386,7 +384,6 @@
                         </div>
             `;
 
-            // แสดงผลตามประเภทที่กด
             if (data.action === 'checkin') {
                 html += `<div class="discord-embed border-[#57f287]"><span class="text-sm text-[#57f287] font-semibold"><i class="fas fa-check-circle mr-1"></i> บันทึกเข้างานสำเร็จ</span></div>`;
             } 
