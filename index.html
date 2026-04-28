@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Staff Attendance Portal (V3)</title>
+    <title>Staff Attendance Portal (V5)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -60,6 +60,7 @@
         .custom-scroll::-webkit-scrollbar { width: 8px; }
         .custom-scroll::-webkit-scrollbar-track { background: #1e1f22; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #383a40; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #4f545c; }
 
         /* Toast Notification Styles */
         #toast-container {
@@ -108,7 +109,7 @@
             display: none; /* ซ่อนไว้ก่อน */
         }
         .timer-display {
-            font-size: 2rem;
+            font-size: 1.8rem;
             font-weight: bold;
             color: #57f287;
             font-family: monospace;
@@ -127,10 +128,10 @@
     <!-- ========================================== -->
     <!-- ส่วนที่ 1: แถบด้านซ้าย -->
     <!-- ========================================== -->
-    <div class="w-96 bg-[#2b2d31] flex flex-col border-r border-gray-700 shrink-0">
+    <div class="w-96 bg-[#2b2d31] flex flex-col border-r border-gray-700 shrink-0 overflow-hidden">
         
         <!-- Header -->
-        <div class="p-5 border-b border-gray-700">
+        <div class="p-5 border-b border-gray-700 shrink-0">
             <h2 class="text-xl font-bold text-white flex items-center gap-2">
                 <i class="fas fa-fingerprint text-[#5865f2]"></i> ระบบบันทึกเวลา
             </h2>
@@ -139,8 +140,10 @@
             </div>
         </div>
 
-        <!-- ช่องกรอกชื่อ+ตำแหน่ง -->
-        <div class="p-5 space-y-4">
+        <!-- Content Area (สามารถเลื่อนได้) -->
+        <div class="flex-1 overflow-y-auto custom-scroll p-5 space-y-4 pb-20">
+            
+            <!-- ช่องกรอกชื่อ+ตำแหน่ง -->
             <div>
                 <label class="text-sm text-gray-400 block mb-2">ชื่อทีมงาน + ตำแหน่ง <span class="text-red-400">*</span></label>
                 <input type="text" id="user-info" class="w-full bg-[#1e1f22] text-white px-4 py-3 rounded-lg outline-none text-base border border-transparent focus:border-[#5865f2] transition" placeholder="เรย์ด้า CL">
@@ -149,64 +152,97 @@
                     ใส่ตำแหน่งท้ายชื่อ: <b>AM, CL, EN, PR, HCL, PL, HAM</b>
                 </div>
             </div>
-        </div>
 
-        <!-- ปุ่มกด -->
-        <div class="px-5 space-y-3">
-            <button onclick="submitLog('checkin')" id="btn-checkin" class="w-full bg-[#57f287] hover:bg-[#3ba55c] text-black font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 text-base">
-                <i class="fas fa-right-to-bracket"></i> เข้างาน
-            </button>
-            <button onclick="submitLog('checkout')" id="btn-checkout" class="w-full bg-[#ed4245] hover:bg-[#c03538] text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 text-base">
-                <i class="fas fa-right-from-bracket"></i> ออกงาน
-            </button>
-            
-            <!-- ปุ่มเช็กเวลาใหม่ -->
-            <button onclick="checkTime()" class="w-full bg-[#fbbf24] hover:bg-[#d97706] text-black font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 text-base">
-                <i class="fas fa-stopwatch"></i> ตรวจสอบเวลาทำงาน
-            </button>
-
-            <button onclick="toggleProofForm()" id="btn-proof-toggle" class="w-full bg-[#5865f2] hover:bg-[#4752c4] text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 text-base">
-                <i class="fas fa-camera"></i> ส่งหลักฐานการทำงาน
-            </button>
-        </div>
-
-        <!-- หน้าต่างแสดงเวลานับถอยหลัง -->
-        <div id="timer-box">
-            <div class="text-xs text-gray-400 uppercase tracking-wider mb-1">เวลาคงเหลือ (ครบ 3 ชม)</div>
-            <div id="countdown-display" class="timer-display">00:00:00</div>
-            <div id="timer-message" class="text-xs text-gray-300">กำลังคำนวณ...</div>
-        </div>
-
-        <!-- ฟอร์มส่งหลักฐาน -->
-        <div id="proof-form" class="hidden px-5 pt-4">
-            <div class="bg-[#1e1f22] p-4 rounded-lg border border-gray-700 space-y-3">
-                <div>
-                    <label class="text-xs text-gray-400 block mb-1">รายละเอียดงาน</label>
-                    <textarea id="proof-detail" rows="2" class="w-full bg-[#383a40] text-white px-3 py-2 rounded outline-none text-sm resize-none" placeholder="ทำอะไรมาบ้าง..."></textarea>
-                </div>
+            <!-- ปุ่มกด -->
+            <div class="space-y-3">
+                <button onclick="submitLog('checkin')" id="btn-checkin" class="w-full bg-[#57f287] hover:bg-[#3ba55c] text-black font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 text-base">
+                    <i class="fas fa-right-to-bracket"></i> เข้างาน
+                </button>
                 
-                <input type="file" id="proof-file-input" accept="image/*" class="hidden">
-
-                <div>
-                    <label class="text-xs text-gray-400 block mb-1">แนบรูปภาพ (ขนาดไม่เกิน 500KB)</label>
-                    <button type="button" onclick="document.getElementById('proof-file-input').click()" class="w-full bg-[#383a40] hover:bg-[#4a4d55] text-white px-3 py-2 rounded outline-none text-sm flex items-center justify-center gap-2 border border-dashed border-gray-600 transition">
-                        <i class="fas fa-image"></i> เลือกรูปภาพจากเครื่อง
-                    </button>
-                    <div id="file-name-display" class="text-[10px] text-green-400 mt-1 hidden">
-                        <i class="fas fa-check"></i> เลือกรูปเรียบร้อย
+                <!-- ปุ่มออกงาน -->
+                <button onclick="toggleCheckoutForm()" id="btn-checkout-toggle" class="w-full bg-[#ed4245] hover:bg-[#c03538] text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 text-base">
+                    <i class="fas fa-right-from-bracket"></i> ออกงาน (พร้อมเหตุผล)
+                </button>
+                
+                <!-- ฟอร์มออกงาน -->
+                <div id="checkout-form" class="hidden">
+                    <div class="bg-[#1e1f22] p-4 rounded-lg border border-gray-700 space-y-3">
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">เหตุผลที่ออกงาน</label>
+                            <textarea id="checkout-reason" rows="2" class="w-full bg-[#383a40] text-white px-3 py-2 rounded outline-none text-sm resize-none" placeholder="เช่น ทำงานครบแล้ว, ลาป่วย..."></textarea>
+                        </div>
+                        <button onclick="submitLog('checkout')" id="btn-checkout-confirm" class="w-full bg-[#ed4245] hover:bg-[#c03538] text-white text-sm font-semibold py-2 rounded-md transition">
+                            <i class="fas fa-check mr-1"></i> ยืนยันออกงาน
+                        </button>
                     </div>
                 </div>
 
-                <button onclick="submitLog('proof')" class="w-full bg-[#5865f2] hover:bg-[#4752c4] text-white text-sm font-semibold py-2 rounded-md transition">
-                    <i class="fas fa-paper-plane mr-1"></i> ยืนยันส่ง
+                <!-- ปุ่มลางาน (ใหม่) -->
+                <button onclick="toggleLeaveForm()" id="btn-leave-toggle" class="w-full bg-[#f97316] hover:bg-[#ea580c] text-black font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 text-base">
+                    <i class="fas fa-plane-departure"></i> ลางาน (พร้อมเหตุผล)
+                </button>
+
+                <!-- ฟอร์มลางาน (ใหม่) -->
+                <div id="leave-form" class="hidden">
+                    <div class="bg-[#1e1f22] p-4 rounded-lg border border-gray-700 space-y-3">
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">เหตุผลที่ลางาน</label>
+                            <textarea id="leave-reason" rows="2" class="w-full bg-[#383a40] text-white px-3 py-2 rounded outline-none text-sm resize-none" placeholder="เช่น ลากิจ, ลาป่วย..."></textarea>
+                        </div>
+                        <button onclick="submitLog('leave')" id="btn-leave-confirm" class="w-full bg-[#f97316] hover:bg-[#ea580c] text-white text-sm font-semibold py-2 rounded-md transition">
+                            <i class="fas fa-check mr-1"></i> ยืนยันลางาน
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ปุ่มเช็กเวลา -->
+                <button onclick="checkTime()" class="w-full bg-[#fbbf24] hover:bg-[#d97706] text-black font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 text-base">
+                    <i class="fas fa-stopwatch"></i> ตรวจสอบเวลาทำงาน
+                </button>
+
+                <!-- ปุ่มส่งหลักฐาน -->
+                <button onclick="toggleProofForm()" id="btn-proof-toggle" class="w-full bg-[#5865f2] hover:bg-[#4752c4] text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 text-base">
+                    <i class="fas fa-camera"></i> ส่งหลักฐานการทำงาน
                 </button>
             </div>
-        </div>
 
-        <div class="flex-1"></div>
+            <!-- หน้าต่างแสดงเวลานับถอยหลัง -->
+            <div id="timer-box">
+                <div class="text-xs text-gray-400 uppercase tracking-wider mb-1">เวลาคงเหลือ (ครบ 3 ชม)</div>
+                <div id="countdown-display" class="timer-display">00:00:00</div>
+                <div id="timer-message" class="text-xs text-gray-300">กำลังคำนวณ...</div>
+            </div>
+
+            <!-- ฟอร์มส่งหลักฐาน -->
+            <div id="proof-form" class="hidden">
+                <div class="bg-[#1e1f22] p-4 rounded-lg border border-gray-700 space-y-3">
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-1">รายละเอียดงาน</label>
+                        <textarea id="proof-detail" rows="2" class="w-full bg-[#383a40] text-white px-3 py-2 rounded outline-none text-sm resize-none" placeholder="ทำอะไรมาบ้าง..."></textarea>
+                    </div>
+                    
+                    <input type="file" id="proof-file-input" accept="image/*" class="hidden">
+
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-1">แนบรูปภาพ (ขนาดไม่เกิน 500KB)</label>
+                        <button type="button" onclick="document.getElementById('proof-file-input').click()" class="w-full bg-[#383a40] hover:bg-[#4a4d55] text-white px-3 py-2 rounded outline-none text-sm flex items-center justify-center gap-2 border border-dashed border-gray-600 transition">
+                            <i class="fas fa-image"></i> เลือกรูปภาพจากเครื่อง
+                        </button>
+                        <div id="file-name-display" class="text-[10px] text-green-400 mt-1 hidden">
+                            <i class="fas fa-check"></i> เลือกรูปเรียบร้อย
+                        </div>
+                    </div>
+
+                    <button onclick="submitLog('proof')" class="w-full bg-[#5865f2] hover:bg-[#4752c4] text-white text-sm font-semibold py-2 rounded-md transition">
+                        <i class="fas fa-paper-plane mr-1"></i> ยืนยันส่ง
+                    </button>
+                </div>
+            </div>
+
+        </div>
         
         <!-- Status Footer -->
-        <div class="p-5 border-t border-gray-700">
+        <div class="p-5 border-t border-gray-700 shrink-0 bg-[#2b2d31] z-10">
             <div class="text-xs text-gray-500 flex items-center gap-2">
                 <i class="fas fa-circle text-[#57f287] text-[8px]"></i> พร้อมใช้งาน
             </div>
@@ -242,7 +278,7 @@
         const liveFeed = document.getElementById('live-feed');
         const emptyState = document.getElementById('empty-state');
         let selectedImageBase64 = null;
-        let countdownInterval = null; // เก็บตัวจับเวลา
+        let countdownInterval = null;
 
         function showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');
@@ -261,6 +297,17 @@
 
         function toggleProofForm() {
             const form = document.getElementById('proof-form');
+            form.classList.toggle('hidden');
+        }
+
+        function toggleCheckoutForm() {
+            const form = document.getElementById('checkout-form');
+            form.classList.toggle('hidden');
+        }
+
+        // --- ฟังก์ชันสลับฟอร์มลางาน ---
+        function toggleLeaveForm() {
+            const form = document.getElementById('leave-form');
             form.classList.toggle('hidden');
         }
 
@@ -332,7 +379,23 @@
             let btnId = "";
 
             if (actionType === 'checkin') btnId = "btn-checkin";
-            else if (actionType === 'checkout') btnId = "btn-checkout";
+            else if (actionType === 'checkout') {
+                btnId = "btn-checkout-confirm";
+                detail = document.getElementById('checkout-reason').value.trim();
+                if (!detail) {
+                    showToast("⚠️ กรุณาระบุเหตุผลที่ออกงาน", "error");
+                    return;
+                }
+            } 
+            else if (actionType === 'leave') {
+                // --- จัดการ Logic ลางาน ---
+                btnId = "btn-leave-confirm";
+                detail = document.getElementById('leave-reason').value.trim();
+                if (!detail) {
+                    showToast("⚠️ กรุณาระบุเหตุผลที่ลางาน", "error");
+                    return;
+                }
+            } 
             else if (actionType === 'proof') {
                 btnId = "btn-proof-toggle";
                 detail = document.getElementById('proof-detail').value.trim();
@@ -364,10 +427,19 @@
                         let msg = "";
                         if(actionType === 'checkin') msg = "✅ บันทึกเข้างานเรียบร้อย";
                         if(actionType === 'checkout') msg = "👋 บันทึกออกงานเรียบร้อย";
+                        if(actionType === 'leave') msg = "🌴 แจ้งลางานเรียบร้อย";
                         if(actionType === 'proof') msg = "📸 ส่งหลักฐานเรียบร้อย";
                         
                         showToast(msg, "success");
 
+                        if (actionType === 'checkout') {
+                            document.getElementById('checkout-reason').value = '';
+                            toggleCheckoutForm();
+                        }
+                        if (actionType === 'leave') {
+                            document.getElementById('leave-reason').value = '';
+                            toggleLeaveForm();
+                        }
                         if (actionType === 'proof') {
                             document.getElementById('proof-detail').value = '';
                             fileInput.value = '';
@@ -384,9 +456,7 @@
             }
         }
 
-        // ==========================================
-        // ⏱️ ฟังก์ชันตรวจสอบเวลา (Check Time)
-        // ==========================================
+        // --- Check Time Function ---
         function checkTime() {
             if (!db) {
                 showToast("❌ ระบบยังไม่เชื่อมต่อฐานข้อมูล", "error");
@@ -401,10 +471,8 @@
                 return;
             }
 
-            // เคลียร์ตัวจับเวลาเก่า (ถ้ามี)
             if (countdownInterval) clearInterval(countdownInterval);
 
-            // แสดงกล่อง Timer
             const timerBox = document.getElementById('timer-box');
             const display = document.getElementById('countdown-display');
             const message = document.getElementById('timer-message');
@@ -414,7 +482,6 @@
             message.textContent = "กำลังค้นหาบันทึก...";
             display.classList.remove('timer-ready');
 
-            // ค้นหาบันทึกล่าสุดของผู้ใช้คนนี้ (ดึงมา 5 รายการเพียงพอ)
             db.ref('logs').orderByChild('user').equalTo(parsed.name).limitToLast(5).once('value', (snapshot) => {
                 if (!snapshot.exists()) {
                     display.textContent = "--:--:--";
@@ -438,31 +505,26 @@
                     return;
                 }
 
-                // ตรวจสอบว่าบันทึกล่าสุดคือ "checkin" หรือไม่
                 if (latestEntry.action !== 'checkin') {
                     display.textContent = "--:--:--";
-                    message.textContent = "บันทึกล่าสุดของคุณคือ 'ออกงาน' หรือ 'ส่งหลักฐาน' (ไม่ได้เข้างานอยู่)";
+                    message.textContent = "บันทึกล่าสุดของคุณคือ 'ออกงาน' หรือ 'ลางาน' (ไม่ได้เข้างานอยู่)";
                     return;
                 }
 
-                // คำนวณเวลาเป้าหมาย (เข้างาน + 3 ชม)
                 const checkInTime = latestEntry.timestamp;
                 const targetTime = checkInTime + (3 * 60 * 60 * 1000); // 3 hours in ms
                 
-                // ฟังก์ชันอัปเดตเวลาทุกๆ 1 วินาที
                 function updateTimer() {
                     const now = Date.now();
                     const diff = targetTime - now;
 
                     if (diff <= 0) {
-                        // ครบเวลาแล้ว
                         clearInterval(countdownInterval);
                         display.textContent = "00:00:00";
                         display.classList.add('timer-ready');
                         message.textContent = "✅ ทำงานครบ 3 ชั่วโมงแล้ว สามารถออกจากดิสคอร์ดได้";
                         showToast("คุณสามารถออกงานได้แล้วครับ!", "success");
                     } else {
-                        // แปลง ms เป็น ชม:นาที:วินาที
                         const h = Math.floor(diff / (1000 * 60 * 60));
                         const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
                         const s = Math.floor((diff % (1000 * 60)) / 1000);
@@ -476,13 +538,12 @@
                     }
                 }
 
-                // เริ่มจับเวลา
-                updateTimer(); // รันครั้งแรกทันที
+                updateTimer();
                 countdownInterval = setInterval(updateTimer, 1000);
             });
         }
 
-        // --- ฟังก์ชันลบ ---
+        // --- Delete Function ---
         function deleteLog(key) {
             if(!db) return;
             if(confirm('ยืนยันลบบันทึกนี้?')) {
@@ -542,8 +603,20 @@
                 html += `<div class="discord-embed border-[#57f287]"><span class="text-sm text-[#57f287] font-semibold"><i class="fas fa-check-circle mr-1"></i> บันทึกเข้างานสำเร็จ</span></div>`;
             } 
             else if (data.action === 'checkout') {
-                html += `<div class="discord-embed border-[#ed4245]"><span class="text-sm text-[#ed4245] font-semibold"><i class="fas fa-sign-out-alt mr-1"></i> บันทึกออกงานสำเร็จ</span></div>`;
+                let reasonHtml = '';
+                if(data.detail) {
+                    reasonHtml = `<div class="text-xs text-gray-300 mt-1 border-t border-gray-600 pt-1">เหตุผล: ${data.detail}</div>`;
+                }
+                html += `<div class="discord-embed border-[#ed4245]"><span class="text-sm text-[#ed4245] font-semibold"><i class="fas fa-sign-out-alt mr-1"></i> บันทึกออกงานสำเร็จ</span>${reasonHtml}</div>`;
             } 
+            else if (data.action === 'leave') {
+                // --- แสดงผลลางาน ---
+                let reasonHtml = '';
+                if(data.detail) {
+                    reasonHtml = `<div class="text-xs text-gray-300 mt-1 border-t border-gray-600 pt-1">เหตุผล: ${data.detail}</div>`;
+                }
+                html += `<div class="discord-embed border-[#f97316]"><span class="text-sm text-[#f97316] font-semibold"><i class="fas fa-plane-departure mr-1"></i> แจ้งลางาน</span>${reasonHtml}</div>`;
+            }
             else if (data.action === 'proof') {
                 html += `
                     <div class="discord-embed border-[#5865f2]">
